@@ -13,7 +13,7 @@ pub fn Parser(comptime T: type) type {
         /// Take a single value from the input.
         pub fn takeOne(input: T) !Result(T) {
             if (input.len == 0) {
-                return error.EmptyInput;
+                return error.UnexpectedEndfInput;
             }
 
             return .{ input[0..1], input[1..] };
@@ -24,7 +24,7 @@ pub fn Parser(comptime T: type) type {
         pub fn takeWhile(input: T, comptime pred: fn (u8) bool) !Result(T) {
             // Check if the input is empty.
             if (input.len == 0) {
-                return error.UnexpectedEof;
+                return error.UnexpectedEndOfInput;
             }
 
             // Scan the input until we find a character that doesn't match the predicate.
@@ -41,7 +41,7 @@ pub fn Parser(comptime T: type) type {
 
             // If the predicate never matches we've run out of input.
             if (!found) {
-                return error.UnexpectedEof;
+                return error.UnexpectedEndOfInput;
             }
 
             return .{ input[0..i], input[i..] };
@@ -50,7 +50,7 @@ pub fn Parser(comptime T: type) type {
         /// Skip a single value from the input.
         pub fn skipOne(input: T) !T {
             if (input.len == 0) {
-                return error.EmptyInput;
+                return error.UnexpectedEndfInput;
             }
 
             return input[1..];
@@ -61,7 +61,7 @@ pub fn Parser(comptime T: type) type {
         pub fn skipWhile(input: T, comptime pred: fn (u8) bool) !T {
             // Check if the input is empty.
             if (input.len == 0) {
-                return error.UnexpectedEof;
+                return error.UnexpectedEndOfInput;
             }
 
             // Scan the input until we find a character that doesn't match the predicate.
@@ -78,7 +78,7 @@ pub fn Parser(comptime T: type) type {
 
             // If the predicate never matches we've run out of input.
             if (!found) {
-                return error.UnexpectedEof;
+                return error.UnexpectedEndOfInput;
             }
 
             return input[i..];
@@ -113,7 +113,7 @@ test "take one" {
 }
 
 test "take one empty" {
-    try testing.expectError(error.EmptyInput, str.takeOne(""));
+    try testing.expectError(error.UnexpectedEndfInput, str.takeOne(""));
 }
 
 test "take while" {
@@ -127,12 +127,12 @@ test "take while" {
 }
 
 test "take while empty" {
-    try testing.expectError(error.UnexpectedEof, str.takeWhile("", std.ascii.isDigit));
+    try testing.expectError(error.UnexpectedEndOfInput, str.takeWhile("", std.ascii.isDigit));
 }
 
 test "take while no match" {
     const input = "hello";
-    try testing.expectError(error.UnexpectedEof, str.takeWhile(input, std.ascii.isDigit));
+    try testing.expectError(error.UnexpectedEndOfInput, str.takeWhile(input, std.ascii.isDigit));
 }
 
 test "skip one" {
@@ -150,7 +150,7 @@ test "skip while" {
 }
 
 test "skip while empty" {
-    try testing.expectError(error.UnexpectedEof, str.skipWhile("", std.ascii.isDigit));
+    try testing.expectError(error.UnexpectedEndOfInput, str.skipWhile("", std.ascii.isDigit));
 }
 
 test "tag" {
