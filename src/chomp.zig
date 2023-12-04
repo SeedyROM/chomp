@@ -8,7 +8,7 @@ fn Result(comptime T: type) type {
     return [2]T;
 }
 
-pub const string = struct {
+pub const str = struct {
     /// Take a single value from the input.
     pub fn takeOne(input: []const u8) !Result([]const u8) {
         if (input.len == 0) {
@@ -101,23 +101,21 @@ pub const string = struct {
     }
 };
 
-pub usingnamespace string;
-
 test "take one" {
     const input = "hello";
     const expected = "h";
-    const actual, _ = try string.takeOne(input);
+    const actual, _ = try str.takeOne(input);
     try testing.expectEqualStrings(actual, expected);
 }
 
 test "take one empty" {
-    try testing.expectError(error.EmptyInput, string.takeOne(""));
+    try testing.expectError(error.EmptyInput, str.takeOne(""));
 }
 
 test "take while" {
     const input = "123hello";
     const expected = "123";
-    const actual, const rest = try string.takeWhile(input, std.ascii.isDigit);
+    const actual, const rest = try str.takeWhile(input, std.ascii.isDigit);
     try testing.expectEqualStrings(expected, actual);
 
     const expectedRest = "hello";
@@ -125,36 +123,36 @@ test "take while" {
 }
 
 test "take while empty" {
-    try testing.expectError(error.UnexpectedEof, string.takeWhile("", std.ascii.isDigit));
+    try testing.expectError(error.UnexpectedEof, str.takeWhile("", std.ascii.isDigit));
 }
 
 test "take while no match" {
     const input = "hello";
-    try testing.expectError(error.UnexpectedEof, string.takeWhile(input, std.ascii.isDigit));
+    try testing.expectError(error.UnexpectedEof, str.takeWhile(input, std.ascii.isDigit));
 }
 
 test "skip one" {
     const input = "hello";
     const expected = "ello";
-    const actual = try string.skipOne(input);
+    const actual = try str.skipOne(input);
     try testing.expectEqualStrings(expected, actual);
 }
 
 test "skip while" {
     const input = "123hello";
     const expected = "hello";
-    const actual = try string.skipWhile(input, std.ascii.isDigit);
+    const actual = try str.skipWhile(input, std.ascii.isDigit);
     try testing.expectEqualStrings(expected, actual);
 }
 
 test "skip while empty" {
-    try testing.expectError(error.UnexpectedEof, string.skipWhile("", std.ascii.isDigit));
+    try testing.expectError(error.UnexpectedEof, str.skipWhile("", std.ascii.isDigit));
 }
 
 test "tag" {
     const input = "hello";
     const expected = "he";
-    const actual, const rest = try string.tag(input, "he");
+    const actual, const rest = try str.tag(input, "he");
     try testing.expectEqualStrings(expected, actual);
 
     const expectedRest = "llo";
@@ -164,11 +162,11 @@ test "tag" {
 test "parse simple expression" {
     const input = "1337    +  420";
 
-    const lhs, var rest = try string.takeWhile(input, std.ascii.isDigit);
-    rest = try string.skipWhile(rest, std.ascii.isWhitespace);
-    const op, rest = try string.tag(rest, "+");
-    rest = try string.skipWhile(rest, std.ascii.isWhitespace);
-    const rhs, _ = try string.takeWhile(rest, std.ascii.isDigit);
+    const lhs, var rest = try str.takeWhile(input, std.ascii.isDigit);
+    rest = try str.skipWhile(rest, std.ascii.isWhitespace);
+    const op, rest = try str.tag(rest, "+");
+    rest = try str.skipWhile(rest, std.ascii.isWhitespace);
+    const rhs, _ = try str.takeWhile(rest, std.ascii.isDigit);
 
     try testing.expectEqualStrings(lhs, "1337");
     try testing.expectEqualStrings(op, "+");
