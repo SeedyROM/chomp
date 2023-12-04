@@ -158,7 +158,7 @@ test "tag" {
 }
 
 test "parse simple expression" {
-    const input = "1337 + 420";
+    const input = "1337    +  420";
 
     const one, var rest = try takeWhile(input, std.ascii.isDigit);
     rest = try skipWhile(rest, std.ascii.isWhitespace);
