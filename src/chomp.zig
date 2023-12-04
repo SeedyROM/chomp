@@ -8,98 +8,102 @@ fn Result(comptime T: type) type {
     return [2]T;
 }
 
-pub const str = struct {
-    /// Take a single value from the input.
-    pub fn takeOne(input: []const u8) !Result([]const u8) {
-        if (input.len == 0) {
-            return error.EmptyInput;
-        }
-
-        return .{ input[0..1], input[1..] };
-    }
-
-    /// Take a slice of values from the input while the predicate returns true.
-    /// If the predicate never returns true, return an error.
-    pub fn takeWhile(input: []const u8, comptime pred: fn (u8) bool) !Result([]const u8) {
-        // Check if the input is empty.
-        if (input.len == 0) {
-            return error.UnexpectedEof;
-        }
-
-        // Scan the input until we find a character that doesn't match the predicate.
-        var i: usize = 0;
-        var found = false;
-        while (i < input.len) : (i += 1) {
-            // If the predicate returns false, we've found the end of the match.
-            if (pred(input[i])) {
-                found = true;
-            } else {
-                break;
+pub fn Parser(comptime T: type) type {
+    return struct {
+        /// Take a single value from the input.
+        pub fn takeOne(input: T) !Result(T) {
+            if (input.len == 0) {
+                return error.EmptyInput;
             }
+
+            return .{ input[0..1], input[1..] };
         }
 
-        // If the predicate never matches we've run out of input.
-        if (!found) {
-            return error.UnexpectedEof;
-        }
-
-        return .{ input[0..i], input[i..] };
-    }
-
-    /// Skip a single value from the input.
-    pub fn skipOne(input: []const u8) ![]const u8 {
-        if (input.len == 0) {
-            return error.EmptyInput;
-        }
-
-        return input[1..];
-    }
-
-    /// Skip a slice of values from the input while the predicate returns true.
-    /// If the predicate never returns true, return an error.
-    pub fn skipWhile(input: []const u8, comptime pred: fn (u8) bool) ![]const u8 {
-        // Check if the input is empty.
-        if (input.len == 0) {
-            return error.UnexpectedEof;
-        }
-
-        // Scan the input until we find a character that doesn't match the predicate.
-        var i: usize = 0;
-        var found = false;
-        while (i < input.len) : (i += 1) {
-            // If the predicate returns false, we've found the end of the match.
-            if (pred(input[i])) {
-                found = true;
-            } else {
-                break;
+        /// Take a slice of values from the input while the predicate returns true.
+        /// If the predicate never returns true, return an error.
+        pub fn takeWhile(input: T, comptime pred: fn (u8) bool) !Result(T) {
+            // Check if the input is empty.
+            if (input.len == 0) {
+                return error.UnexpectedEof;
             }
+
+            // Scan the input until we find a character that doesn't match the predicate.
+            var i: usize = 0;
+            var found = false;
+            while (i < input.len) : (i += 1) {
+                // If the predicate returns false, we've found the end of the match.
+                if (pred(input[i])) {
+                    found = true;
+                } else {
+                    break;
+                }
+            }
+
+            // If the predicate never matches we've run out of input.
+            if (!found) {
+                return error.UnexpectedEof;
+            }
+
+            return .{ input[0..i], input[i..] };
         }
 
-        // If the predicate never matches we've run out of input.
-        if (!found) {
-            return error.UnexpectedEof;
+        /// Skip a single value from the input.
+        pub fn skipOne(input: T) !T {
+            if (input.len == 0) {
+                return error.EmptyInput;
+            }
+
+            return input[1..];
         }
 
-        return input[i..];
-    }
+        /// Skip a slice of values from the input while the predicate returns true.
+        /// If the predicate never returns true, return an error.
+        pub fn skipWhile(input: T, comptime pred: fn (u8) bool) !T {
+            // Check if the input is empty.
+            if (input.len == 0) {
+                return error.UnexpectedEof;
+            }
 
-    /// Take a slice of values from the input that match the given tag.
-    /// If the input doesn't match the tag, return an error.
-    pub fn tag(input: []const u8, match: []const u8) !Result([]const u8) {
-        // If the input is shorter than the match, we can't match.
-        if (input.len < match.len) {
-            return error.MissingTag;
+            // Scan the input until we find a character that doesn't match the predicate.
+            var i: usize = 0;
+            var found = false;
+            while (i < input.len) : (i += 1) {
+                // If the predicate returns false, we've found the end of the match.
+                if (pred(input[i])) {
+                    found = true;
+                } else {
+                    break;
+                }
+            }
+
+            // If the predicate never matches we've run out of input.
+            if (!found) {
+                return error.UnexpectedEof;
+            }
+
+            return input[i..];
         }
 
-        // If the input doesn't match the tag, we can't match.
-        if (!std.mem.eql(u8, input[0..match.len], match)) {
-            return error.MissingTag;
-        }
+        /// Take a slice of values from the input that match the given tag.
+        /// If the input doesn't match the tag, return an error.
+        pub fn tag(input: T, match: T) !Result(T) {
+            // If the input is shorter than the match, we can't match.
+            if (input.len < match.len) {
+                return error.MissingTag;
+            }
 
-        // Otherwise, we've matched.
-        return .{ input[0..match.len], input[match.len..] };
-    }
-};
+            // If the input doesn't match the tag, we can't match.
+            if (!std.mem.eql(u8, input[0..match.len], match)) {
+                return error.MissingTag;
+            }
+
+            // Otherwise, we've matched.
+            return .{ input[0..match.len], input[match.len..] };
+        }
+    };
+}
+
+const str = Parser([]const u8);
 
 test "take one" {
     const input = "hello";
