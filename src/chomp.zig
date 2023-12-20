@@ -10,6 +10,12 @@ fn Result(comptime T: type) type {
 
 pub fn Parser(comptime T: type) type {
     return struct {
+        /// Get the position based on the initial slice and the current slice.
+        /// This is used to calculate the offset of the current slice.
+        pub fn getPosition(initial: T, current: T) usize {
+            return @abs(@as(i64, @intCast(current.len)) - @as(i64, @intCast(initial.len)));
+        }
+
         /// Take a single value from the input.
         pub fn takeOne(input: T) !Result(T) {
             if (input.len == 0) {
@@ -50,7 +56,7 @@ pub fn Parser(comptime T: type) type {
         /// Skip a single value from the input.
         pub fn skipOne(input: T) !T {
             if (input.len == 0) {
-                return error.UnexpectedEndfInput;
+                return error.UnexpectedEndOfInput;
             }
 
             return input[1..];
@@ -74,6 +80,11 @@ pub fn Parser(comptime T: type) type {
                 } else {
                     break;
                 }
+            }
+
+            // Our loop broke on the first try because we didn't match the predicate return the input.
+            if (i == 0) {
+                return input;
             }
 
             // If the predicate never matches we've run out of input.
@@ -108,7 +119,9 @@ const str = Parser([]const u8);
 test "take one" {
     const input = "hello";
     const expected = "h";
-    const actual, _ = try str.takeOne(input);
+    const actual, const rest = try str.takeOne(input);
+    const offset = str.getPosition(input, rest);
+    try testing.expectEqual(@as(usize, 1), offset);
     try testing.expectEqualStrings(actual, expected);
 }
 
@@ -120,6 +133,8 @@ test "take while" {
     const input = "123hello";
     const expected = "123";
     const actual, const rest = try str.takeWhile(input, std.ascii.isDigit);
+    const offset = str.getPosition(input, rest);
+    try testing.expectEqual(@as(usize, 3), offset);
     try testing.expectEqualStrings(expected, actual);
 
     const expectedRest = "hello";
@@ -139,6 +154,8 @@ test "skip one" {
     const input = "hello";
     const expected = "ello";
     const actual = try str.skipOne(input);
+    const offset = str.getPosition(input, actual);
+    try testing.expectEqual(@as(usize, 1), offset);
     try testing.expectEqualStrings(expected, actual);
 }
 
@@ -146,6 +163,8 @@ test "skip while" {
     const input = "123hello";
     const expected = "hello";
     const actual = try str.skipWhile(input, std.ascii.isDigit);
+    const offset = str.getPosition(input, actual);
+    try testing.expectEqual(@as(usize, 3), offset);
     try testing.expectEqualStrings(expected, actual);
 }
 
@@ -157,6 +176,8 @@ test "tag" {
     const input = "hello";
     const expected = "he";
     const actual, const rest = try str.tag(input, "he");
+    const offset = str.getPosition(input, rest);
+    try testing.expectEqual(@as(usize, 2), offset);
     try testing.expectEqualStrings(expected, actual);
 
     const expectedRest = "llo";
@@ -164,7 +185,7 @@ test "tag" {
 }
 
 test "parse simple expression" {
-    const input = "1337    +  420";
+    const input = "1337    +                   420";
 
     const lhs, var rest = try str.takeWhile(input, std.ascii.isDigit);
     rest = try str.skipWhile(rest, std.ascii.isWhitespace);
@@ -175,4 +196,41 @@ test "parse simple expression" {
     try testing.expectEqualStrings(lhs, "1337");
     try testing.expectEqualStrings(op, "+");
     try testing.expectEqualStrings(rhs, "420");
+}
+
+test "simple whitespace split tokenizer" {
+    const SplitByWhiteSpace = struct {
+        fn isWhitespace(c: u8) bool {
+            return std.ascii.isWhitespace(c);
+        }
+
+        fn isNotWhitespace(c: u8) bool {
+            return !isWhitespace(c);
+        }
+
+        pub fn tokenize(allocator: std.mem.Allocator, input: []const u8) !std.ArrayList([]const u8) {
+            var tokens = std.ArrayList([]const u8).init(allocator);
+            var rest = input;
+            while (rest.len > 0) {
+                // Skip whitespace.
+                rest = try str.skipWhile(rest, isWhitespace);
+                // If we skip over the rest of the input, we're done.
+                if (rest.len == 0) {
+                    break;
+                }
+                // Take all non-whitespace.
+                const token, rest = try str.takeWhile(rest, isNotWhitespace);
+                // Add the token to the list.
+                try tokens.append(token);
+            }
+            return tokens;
+        }
+    };
+
+    const input = "   hello   world I     am here!   ";
+
+    const tokens = try SplitByWhiteSpace.tokenize(testing.allocator, input);
+    defer tokens.deinit();
+
+    try testing.expectEqual(@as(usize, 5), tokens.items.len);
 }
